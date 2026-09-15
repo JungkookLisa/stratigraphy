@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Geological Relative Dating Simulator</title>
     
-    <!-- Mobile Drag and Drop Polyfill (Enables Touch Dragging on Phones) -->
-    <script src="https://cdn.jsdelivr.net/npm/drag-drop-touch@1.3.0/DragDropTouch.js"></script>
-    
     <!-- Canvas Confetti Library -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
@@ -22,7 +19,6 @@
 
         * {
             box-sizing: border-box;
-            touch-action: manipulation;
         }
 
         body {
@@ -163,7 +159,6 @@
             color: var(--primary);
         }
 
-        /* Responsive Canvas Styling */
         .canvas-wrapper {
             width: 100%;
             max-width: 420px;
@@ -199,6 +194,7 @@
             list-style: none;
             padding: 0;
             margin: 10px 0 0 0;
+            position: relative;
         }
 
         .sortable-item {
@@ -212,11 +208,11 @@
             cursor: grab;
             user-select: none;
             -webkit-user-select: none;
-            touch-action: none; /* Prevents mobile scroll while dragging elements */
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
             font-weight: 500;
             font-size: 0.88rem;
             color: #1e293b;
+            touch-action: none;
         }
 
         .sortable-item:active {
@@ -224,7 +220,7 @@
         }
 
         .sortable-item.dragging {
-            opacity: 0.4;
+            opacity: 0.3;
             border-color: var(--accent);
             background-color: #eff6ff;
         }
@@ -232,7 +228,7 @@
         .sortable-item.drag-over {
             border-color: var(--secondary);
             background-color: #ecfdf5;
-            transform: scale(1.02);
+            transform: translateY(2px);
         }
 
         .drag-handle {
@@ -240,7 +236,7 @@
             font-size: 1.3rem;
             color: #94a3b8;
             cursor: grab;
-            padding: 4px 8px; /* Larger hit box for finger touches */
+            padding: 2px 6px;
         }
 
         .submit-btn {
@@ -328,10 +324,10 @@
 <div class="container">
     <header>
         <h1>Geological Relative Dating</h1>
-        <p>Analyze the geological cross-section. Touch and drag the events into order from <strong>Oldest (Top)</strong> to <strong>Youngest (Bottom)</strong>.</p>
+        <p>Analyze the geological cross-section. Drag the events into order from <strong>Oldest (Top)</strong> to <strong>Youngest (Bottom)</strong>.</p>
     </header>
 
-    <!-- Quick Reference -->
+    <!-- Reference -->
     <div class="guide-box">
         <h3>💡 Relative Dating Principles Reference:</h3>
         <ul>
@@ -379,7 +375,7 @@
     </div>
 </div>
 
-<!-- Submission Confirmation Modal -->
+<!-- Modal Overlay -->
 <div class="modal-overlay" id="submissionModal">
     <div class="modal-card">
         <div class="modal-icon">🎉</div>
@@ -435,6 +431,7 @@
                 <span>${item.text}</span>
             `;
 
+            // Standard HTML5 Drag (Laptops / Desktops)
             li.addEventListener('dragstart', handleDragStart);
             li.addEventListener('dragover', handleDragOver);
             li.addEventListener('dragenter', handleDragEnter);
@@ -442,10 +439,16 @@
             li.addEventListener('drop', handleDrop);
             li.addEventListener('dragend', handleDragEnd);
 
+            // Pointer/Touch Dragging (Smartphones & Tablets)
+            li.addEventListener('touchstart', handleTouchStart, { passive: false });
+            li.addEventListener('touchmove', handleTouchMove, { passive: false });
+            li.addEventListener('touchend', handleTouchEnd);
+
             listEl.appendChild(li);
         });
     }
 
+    /* ------------------- HTML5 Drag & Drop Engine (Laptops / Desktops) ------------------- */
     let dragSrcIndex = null;
 
     function handleDragStart(e) {
@@ -456,7 +459,6 @@
 
     function handleDragOver(e) {
         if (e.preventDefault) e.preventDefault();
-        if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
         return false;
     }
 
@@ -466,7 +468,6 @@
     function handleDrop(e) {
         if (e.stopPropagation) e.stopPropagation();
         const targetIndex = Number(this.dataset.index);
-        
         if (dragSrcIndex !== null && dragSrcIndex !== targetIndex) {
             const movedItem = currentSequence.splice(dragSrcIndex, 1)[0];
             currentSequence.splice(targetIndex, 0, movedItem);
@@ -482,12 +483,66 @@
         });
     }
 
+    /* ------------------- Touch Event Engine (Mobile / Tablets) ------------------- */
+    let activeTouchElement = null;
+    let touchStartIndex = null;
+
+    function handleTouchStart(e) {
+        activeTouchElement = this;
+        touchStartIndex = Number(this.dataset.index);
+        this.classList.add('dragging');
+    }
+
+    function handleTouchMove(e) {
+        if (!activeTouchElement) return;
+        e.preventDefault(); // Prevents touch screen page scrolling while dragging item
+
+        const touch = e.touches[0];
+        const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
+
+        document.querySelectorAll('.sortable-item').forEach(item => item.classList.remove('drag-over'));
+
+        if (targetElement) {
+            const closestItem = targetElement.closest('.sortable-item');
+            if (closestItem && closestItem !== activeTouchElement) {
+                closestItem.classList.add('drag-over');
+            }
+        }
+    }
+
+    function handleTouchEnd(e) {
+        if (!activeTouchElement) return;
+
+        const changedTouch = e.changedTouches[0];
+        const targetElement = document.elementFromPoint(changedTouch.clientX, changedTouch.clientY);
+
+        if (targetElement) {
+            const closestItem = targetElement.closest('.sortable-item');
+            if (closestItem) {
+                const targetIndex = Number(closestItem.dataset.index);
+                if (touchStartIndex !== null && touchStartIndex !== targetIndex) {
+                    const movedItem = currentSequence.splice(touchStartIndex, 1)[0];
+                    currentSequence.splice(targetIndex, 0, movedItem);
+                    renderList();
+                }
+            }
+        }
+
+        document.querySelectorAll('.sortable-item').forEach(item => {
+            item.classList.remove('dragging');
+            item.classList.remove('drag-over');
+        });
+
+        activeTouchElement = null;
+        touchStartIndex = null;
+    }
+
     function drawDiagram() {
         const canvas = document.getElementById('geologyCanvas');
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Pattern 1: Sandstone
+        // Sandstone Pattern
         const sandCanvas = document.createElement('canvas');
         sandCanvas.width = 10; sandCanvas.height = 10;
         const sandCtx = sandCanvas.getContext('2d');
@@ -495,7 +550,7 @@
         sandCtx.fillStyle = '#d97706'; sandCtx.fillRect(2,2,2,2); sandCtx.fillRect(7,6,2,2);
         const sandPattern = ctx.createPattern(sandCanvas, 'repeat');
 
-        // Pattern 2: Shale
+        // Shale Pattern
         const shaleCanvas = document.createElement('canvas');
         shaleCanvas.width = 12; shaleCanvas.height = 12;
         const shaleCtx = shaleCanvas.getContext('2d');
@@ -504,7 +559,7 @@
         shaleCtx.beginPath(); shaleCtx.moveTo(0,6); shaleCtx.lineTo(12,6); shaleCtx.stroke();
         const shalePattern = ctx.createPattern(shaleCanvas, 'repeat');
 
-        // Pattern 3: Limestone
+        // Limestone Pattern
         const limeCanvas = document.createElement('canvas');
         limeCanvas.width = 20; limeCanvas.height = 10;
         const limeCtx = limeCanvas.getContext('2d');
@@ -595,7 +650,6 @@
                 timestamp: new Date().toISOString()
             });
 
-            // Trigger mobile & desktop responsive confetti burst
             confetti({
                 particleCount: 100,
                 spread: 70,
