@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Geological Relative Dating Simulator</title>
     
+    <!-- Cross-Device Mobile & Touch Drag/Drop Polyfill -->
+    <script src="https://cdn.jsdelivr.net/gh/bernardo-castilho/dragdroptouch@master/DragDropTouch.js"></script>
+    
     <!-- Canvas Confetti Library -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
@@ -194,7 +197,6 @@
             list-style: none;
             padding: 0;
             margin: 10px 0 0 0;
-            position: relative;
         }
 
         .sortable-item {
@@ -208,7 +210,7 @@
             cursor: grab;
             user-select: none;
             -webkit-user-select: none;
-            transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+            transition: all 0.15s ease;
             font-weight: 500;
             font-size: 0.88rem;
             color: #1e293b;
@@ -228,7 +230,7 @@
         .sortable-item.drag-over {
             border-color: var(--secondary);
             background-color: #ecfdf5;
-            transform: translateY(2px);
+            transform: scale(1.01);
         }
 
         .drag-handle {
@@ -252,6 +254,12 @@
             font-weight: 700;
             letter-spacing: 0.5px;
             box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .submit-btn:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+            box-shadow: none;
         }
 
         /* Modal Overlay */
@@ -380,8 +388,8 @@
     <div class="modal-card">
         <div class="modal-icon">🎉</div>
         <h2>Assignment Submitted!</h2>
-        <p>Your sequence has been recorded and submitted directly to your teacher's database.</p>
-        <button class="modal-close-btn" onclick="closeModal()">Close</button>
+        <p>Your response has been saved. The simulator has been reset for the next student.</p>
+        <button class="modal-close-btn" onclick="closeModal()">OK / Done</button>
     </div>
 </div>
 
@@ -414,7 +422,11 @@
     ];
 
     const correctSequence = ['A', 'B', 'U', 'C', 'D', 'E', 'F'];
-    let currentSequence = [...eventsData].sort(() => Math.random() - 0.5);
+    let currentSequence = [];
+
+    function shuffleSequence() {
+        currentSequence = [...eventsData].sort(() => Math.random() - 0.5);
+    }
 
     function renderList() {
         const listEl = document.getElementById('sortableList');
@@ -431,7 +443,6 @@
                 <span>${item.text}</span>
             `;
 
-            // Standard HTML5 Drag (Laptops / Desktops)
             li.addEventListener('dragstart', handleDragStart);
             li.addEventListener('dragover', handleDragOver);
             li.addEventListener('dragenter', handleDragEnter);
@@ -439,16 +450,10 @@
             li.addEventListener('drop', handleDrop);
             li.addEventListener('dragend', handleDragEnd);
 
-            // Pointer/Touch Dragging (Smartphones & Tablets)
-            li.addEventListener('touchstart', handleTouchStart, { passive: false });
-            li.addEventListener('touchmove', handleTouchMove, { passive: false });
-            li.addEventListener('touchend', handleTouchEnd);
-
             listEl.appendChild(li);
         });
     }
 
-    /* ------------------- HTML5 Drag & Drop Engine (Laptops / Desktops) ------------------- */
     let dragSrcIndex = null;
 
     function handleDragStart(e) {
@@ -483,66 +488,12 @@
         });
     }
 
-    /* ------------------- Touch Event Engine (Mobile / Tablets) ------------------- */
-    let activeTouchElement = null;
-    let touchStartIndex = null;
-
-    function handleTouchStart(e) {
-        activeTouchElement = this;
-        touchStartIndex = Number(this.dataset.index);
-        this.classList.add('dragging');
-    }
-
-    function handleTouchMove(e) {
-        if (!activeTouchElement) return;
-        e.preventDefault(); // Prevents touch screen page scrolling while dragging item
-
-        const touch = e.touches[0];
-        const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
-
-        document.querySelectorAll('.sortable-item').forEach(item => item.classList.remove('drag-over'));
-
-        if (targetElement) {
-            const closestItem = targetElement.closest('.sortable-item');
-            if (closestItem && closestItem !== activeTouchElement) {
-                closestItem.classList.add('drag-over');
-            }
-        }
-    }
-
-    function handleTouchEnd(e) {
-        if (!activeTouchElement) return;
-
-        const changedTouch = e.changedTouches[0];
-        const targetElement = document.elementFromPoint(changedTouch.clientX, changedTouch.clientY);
-
-        if (targetElement) {
-            const closestItem = targetElement.closest('.sortable-item');
-            if (closestItem) {
-                const targetIndex = Number(closestItem.dataset.index);
-                if (touchStartIndex !== null && touchStartIndex !== targetIndex) {
-                    const movedItem = currentSequence.splice(touchStartIndex, 1)[0];
-                    currentSequence.splice(targetIndex, 0, movedItem);
-                    renderList();
-                }
-            }
-        }
-
-        document.querySelectorAll('.sortable-item').forEach(item => {
-            item.classList.remove('dragging');
-            item.classList.remove('drag-over');
-        });
-
-        activeTouchElement = null;
-        touchStartIndex = null;
-    }
-
     function drawDiagram() {
         const canvas = document.getElementById('geologyCanvas');
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Sandstone Pattern
+        // Pattern 1: Sandstone
         const sandCanvas = document.createElement('canvas');
         sandCanvas.width = 10; sandCanvas.height = 10;
         const sandCtx = sandCanvas.getContext('2d');
@@ -550,7 +501,7 @@
         sandCtx.fillStyle = '#d97706'; sandCtx.fillRect(2,2,2,2); sandCtx.fillRect(7,6,2,2);
         const sandPattern = ctx.createPattern(sandCanvas, 'repeat');
 
-        // Shale Pattern
+        // Pattern 2: Shale
         const shaleCanvas = document.createElement('canvas');
         shaleCanvas.width = 12; shaleCanvas.height = 12;
         const shaleCtx = shaleCanvas.getContext('2d');
@@ -559,7 +510,7 @@
         shaleCtx.beginPath(); shaleCtx.moveTo(0,6); shaleCtx.lineTo(12,6); shaleCtx.stroke();
         const shalePattern = ctx.createPattern(shaleCanvas, 'repeat');
 
-        // Limestone Pattern
+        // Pattern 3: Limestone
         const limeCanvas = document.createElement('canvas');
         limeCanvas.width = 20; limeCanvas.height = 10;
         const limeCtx = limeCanvas.getContext('2d');
@@ -625,17 +576,23 @@
     }
 
     async function handleSubmission() {
-        const studentName = document.getElementById('studentName').value.trim();
-        const studentId = document.getElementById('studentId').value.trim();
+        const studentNameInput = document.getElementById('studentName');
+        const studentIdInput = document.getElementById('studentId');
         const submitBtn = document.getElementById('submitBtn');
+
+        const studentName = studentNameInput.value.trim();
+        const studentId = studentIdInput.value.trim();
 
         if (!studentName || !studentId) {
             alert('Please fill out your Name and Student ID before submitting.');
             return;
         }
 
+        // Lock form during submission process
         submitBtn.disabled = true;
         submitBtn.innerText = "Transmitting...";
+        studentNameInput.disabled = true;
+        studentIdInput.disabled = true;
 
         const userOrder = currentSequence.map(item => item.id);
         const isCorrect = JSON.stringify(userOrder) === JSON.stringify(correctSequence);
@@ -662,16 +619,37 @@
         } catch (error) {
             console.error("Submission failed: ", error);
             alert("Connection error! Unable to record submission.");
-        } finally {
+            
+            // Re-enable input fields if network error happens
             submitBtn.disabled = false;
             submitBtn.innerText = "🚀 Submit Final Assignment";
+            studentNameInput.disabled = false;
+            studentIdInput.disabled = false;
         }
     }
 
     window.closeModal = function() {
         document.getElementById('submissionModal').classList.remove('active');
+
+        // Reset inputs and form controls
+        const studentNameInput = document.getElementById('studentName');
+        const studentIdInput = document.getElementById('studentId');
+        const submitBtn = document.getElementById('submitBtn');
+
+        studentNameInput.value = '';
+        studentIdInput.value = '';
+        studentNameInput.disabled = false;
+        studentIdInput.disabled = false;
+        submitBtn.disabled = false;
+        submitBtn.innerText = "🚀 Submit Final Assignment";
+
+        // Shuffle sequence for the next student/try
+        shuffleSequence();
+        renderList();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    shuffleSequence();
     renderList();
     drawDiagram();
     document.getElementById('submitBtn').addEventListener('click', handleSubmission);
