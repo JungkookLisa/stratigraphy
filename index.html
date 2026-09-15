@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geological Relative Dating Simulator</title>
+    <!-- Canvas Confetti Library for Dramatic Effects -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --primary: #1e293b;
+            --accent: #3b82f6;
+            --secondary: #10b981;
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            --card-bg: rgba(255, 255, 255, 0.95);
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-gradient);
+            color: #334155;
+            margin: 0;
+            padding: 30px 15px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 35px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            color: var(--primary);
+            font-size: 2.2rem;
+            margin: 0 0 10px 0;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        header p {
+            color: #64748b;
+            font-size: 1rem;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .guide-box {
+            background-color: #f0f9ff;
+            border-left: 5px solid var(--accent);
+            padding: 18px 22px;
+            margin-bottom: 30px;
+            border-radius: 10px;
+        }
+
+        .guide-box h3 {
+            margin: 0 0 8px 0;
+            color: #0369a1;
+            font-size: 1.05rem;
+        }
+
+        .guide-box ul {
+            margin: 0;
+            padding-left: 20px;
+            color: #334155;
+            font-size: 0.92rem;
+            line-height: 1.5;
+        }
+
+        .submission-section {
+            background: #f8fafc;
+            padding: 20px 25px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+
+        .submission-section h2 {
+            margin-top: 0;
+            font-size: 1.15rem;
+            color: var(--primary);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .form-grid { grid-template-columns: 1fr; }
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #475569;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 14px;
+            box-sizing: border-box;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        @media (max-width: 850px) {
+            .grid-container { grid-template-columns: 1fr; }
+        }
+
+        .diagram-container {
+            text-align: center;
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+
+        .diagram-container h3 {
+            margin-top: 0;
+            color: var(--primary);
+        }
+
+        canvas {
+            border: 3px solid #1e293b;
+            border-radius: 12px;
+            max-width: 100%;
+            height: auto;
+            background-color: #fff;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+        }
+
+        .sorting-container {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .sorting-container h3 {
+            margin-top: 0;
+            color: var(--primary);
+        }
+
+        .sortable-list {
+            list-style: none;
+            padding: 0;
+            margin: 15px 0 0 0;
+            min-height: 340px;
+        }
+
+        .sortable-item {
+            background: #ffffff;
+            border: 2px solid #e2e8f0;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            cursor: grab;
+            user-select: none;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+            font-weight: 500;
+            font-size: 0.95rem;
+            color: #1e293b;
+        }
+
+        .sortable-item:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(59, 130, 246, 0.15);
+        }
+
+        .sortable-item.dragging {
+            opacity: 0.3;
+            border-color: var(--accent);
+            background-color: #eff6ff;
+        }
+
+        .sortable-item.drag-over {
+            border-color: var(--secondary);
+            background-color: #ecfdf5;
+            transform: scale(1.03);
+        }
+
+        .drag-handle {
+            margin-right: 14px;
+            font-size: 1.2rem;
+            color: #94a3b8;
+            cursor: grab;
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            padding: 16px 25px;
+            font-size: 1.05rem;
+            border-radius: 10px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+            transition: all 0.25s ease;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.45);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Modal Overlay for Dramatic Effect */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(8px);
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-card {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 420px;
+            width: 90%;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transform: scale(0.8);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .modal-overlay.active .modal-card {
+            transform: scale(1);
+        }
+
+        .modal-icon {
+            font-size: 3.5rem;
+            margin-bottom: 15px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .modal-card h2 {
+            margin: 0 0 10px 0;
+            color: var(--primary);
+        }
+
+        .modal-card p {
+            color: #64748b;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+
+        .modal-close-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .modal-close-btn:hover {
+            background: #334155;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Geological Relative Dating Challenge</h1>
+        <p>Analyze the 7-layer cross-section. Drag and reorder the geological events below from <strong>Oldest (Top)</strong> to <strong>Youngest (Bottom)</strong>.</p>
+    </header>
+
+    <!-- Quick Reference -->
+    <div class="guide-box">
+        <h3>💡 Relative Dating Principles Reference:</h3>
+        <ul>
+            <li><strong>Cross-Cutting Relationships:</strong> Faults or magma intrusions cutting through rock layers are <em>younger</em> than the layers they cut across.</li>
+            <li><strong>Inclusions:</strong> Rock fragments embedded inside a layer are <em>older</em> than the surrounding rock layer.</li>
+            <li><strong>Unconformities:</strong> Buried erosional surfaces (like angular unconformities) represent missing geological time.</li>
+        </ul>
+    </div>
+
+    <!-- Student Details -->
+    <div class="submission-section">
+        <h2>Student Details</h2>
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="studentName">Full Name *</label>
+                <input type="text" id="studentName" placeholder="Enter your full name" required>
+            </div>
+            <div class="form-group">
+                <label for="studentId">Student ID / Section *</label>
+                <input type="text" id="studentId" placeholder="Enter section or ID" required>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid-container">
+        <!-- Diagram Area -->
+        <div class="diagram-container">
+            <h3>Geological Cross-Section</h3>
+            <canvas id="geologyCanvas" width="420" height="420"></canvas>
+            <p><small style="color: #64748b;"><em>Study the fault line, unconformity, intrusions, and inclusions above.</em></small></p>
+        </div>
+
+        <!-- Drag & Drop Area -->
+        <div class="sorting-container">
+            <div>
+                <h3>Sequence Events</h3>
+                <p><small style="color: #64748b;"><strong>Drag & drop</strong> items to rearrange from Oldest (Top) to Youngest (Bottom):</small></p>
+                <ul class="sortable-list" id="sortableList"></ul>
+            </div>
+
+            <button class="submit-btn" id="submitBtn">🚀 Submit Final Assignment</button>
+        </div>
+    </div>
+</div>
+
+<!-- Submission Confirmation Modal -->
+<div class="modal-overlay" id="submissionModal">
+    <div class="modal-card">
+        <div class="modal-icon">🎉</div>
+        <h2>Assignment Submitted!</h2>
+        <p>Your sequence has been recorded and submitted directly to your teacher's dashboard.</p>
+        <button class="modal-close-btn" onclick="closeModal()">Return to Page</button>
+    </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAQneUNThxMjQRXojvbqaRvl0bXrfYPXyw",
+      authDomain: "stratig.firebaseapp.com",
+      databaseURL: "https://stratig-default-rtdb.firebaseio.com",
+      projectId: "stratig",
+      storageBucket: "stratig.firebasestorage.app",
+      messagingSenderId: "759157552193",
+      appId: "1:759157552193:web:7c4c5e89891b0db4df82c0"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Geological Events without "Step X" prefixes
+    const eventsData = [
+        { id: 'A', text: 'Deposition of Sandstone (Layer A)' },
+        { id: 'B', text: 'Deposition of Shale (Layer B)' },
+        { id: 'U', text: 'Tilting & Erosion / Angular Unconformity (U)' },
+        { id: 'C', text: 'Deposition of Limestone (Layer C, with inclusions)' },
+        { id: 'D', text: 'Deposition of Siltstone (Layer D)' },
+        { id: 'E', text: 'Magma Dike Intrusion (E)' },
+        { id: 'F', text: 'Fault Displacement (F)' }
+    ];
+
+    const correctSequence = ['A', 'B', 'U', 'C', 'D', 'E', 'F'];
+    let currentSequence = [...eventsData].sort(() => Math.random() - 0.5);
+
+    function renderList() {
+        const listEl = document.getElementById('sortableList');
+        listEl.innerHTML = '';
+
+        currentSequence.forEach((item, index) => {
+            const li = document.createElement('li');
+            li.className = 'sortable-item';
+            li.setAttribute('draggable', 'true');
+            li.dataset.index = index;
+
+            li.innerHTML = `
+                <span class="drag-handle">⣿</span>
+                <span>${item.text}</span>
+            `;
+
+            li.addEventListener('dragstart', handleDragStart);
+            li.addEventListener('dragover', handleDragOver);
+            li.addEventListener('dragenter', handleDragEnter);
+            li.addEventListener('dragleave', handleDragLeave);
+            li.addEventListener('drop', handleDrop);
+            li.addEventListener('dragend', handleDragEnd);
+
+            listEl.appendChild(li);
+        });
+    }
+
+    let dragSrcIndex = null;
+
+    function handleDragStart(e) {
+        dragSrcIndex = Number(this.dataset.index);
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragOver(e) {
+        if (e.preventDefault) e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        return false;
+    }
+
+    function handleDragEnter() { this.classList.add('drag-over'); }
+    function handleDragLeave() { this.classList.remove('drag-over'); }
+
+    function handleDrop(e) {
+        if (e.stopPropagation) e.stopPropagation();
+        const targetIndex = Number(this.dataset.index);
+        
+        if (dragSrcIndex !== null && dragSrcIndex !== targetIndex) {
+            const movedItem = currentSequence.splice(dragSrcIndex, 1)[0];
+            currentSequence.splice(targetIndex, 0, movedItem);
+            renderList();
+        }
+        return false;
+    }
+
+    function handleDragEnd() {
+        this.classList.remove('dragging');
+        document.querySelectorAll('.sortable-item').forEach(item => {
+            item.classList.remove('drag-over');
+        });
+    }
+
+    // High Quality Patterned Geological Diagram
+    function drawDiagram() {
+        const canvas = document.getElementById('geologyCanvas');
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Pattern 1: Sandstone (Dots)
+        const sandCanvas = document.createElement('canvas');
+        sandCanvas.width = 10; sandCanvas.height = 10;
+        const sandCtx = sandCanvas.getContext('2d');
+        sandCtx.fillStyle = '#fef3c7'; sandCtx.fillRect(0,0,10,10);
+        sandCtx.fillStyle = '#d97706'; sandCtx.fillRect(2,2,2,2); sandCtx.fillRect(7,6,2,2);
+        const sandPattern = ctx.createPattern(sandCanvas, 'repeat');
+
+        // Pattern 2: Shale (Horizontal lines)
+        const shaleCanvas = document.createElement('canvas');
+        shaleCanvas.width = 12; shaleCanvas.height = 12;
+        const shaleCtx = shaleCanvas.getContext('2d');
+        shaleCtx.fillStyle = '#cbd5e1'; shaleCtx.fillRect(0,0,12,12);
+        shaleCtx.strokeStyle = '#64748b'; shaleCtx.lineWidth = 1;
+        shaleCtx.beginPath(); shaleCtx.moveTo(0,6); shaleCtx.lineTo(12,6); shaleCtx.stroke();
+        const shalePattern = ctx.createPattern(shaleCanvas, 'repeat');
+
+        // Pattern 3: Limestone (Bricks Matrix)
+        const limeCanvas = document.createElement('canvas');
+        limeCanvas.width = 20; limeCanvas.height = 10;
+        const limeCtx = limeCanvas.getContext('2d');
+        limeCtx.fillStyle = '#fed7aa'; limeCtx.fillRect(0,0,20,10);
+        limeCtx.strokeStyle = '#ea580c'; limeCtx.lineWidth = 1;
+        limeCtx.strokeRect(0,0,20,10); limeCtx.beginPath(); limeCtx.moveTo(10,5); limeCtx.lineTo(10,10); limeCtx.stroke();
+        const limePattern = ctx.createPattern(limeCanvas, 'repeat');
+
+        // Layer A (Tilted Sandstone)
+        ctx.fillStyle = sandPattern;
+        ctx.beginPath(); ctx.moveTo(0, 420); ctx.lineTo(420, 310); ctx.lineTo(420, 420);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+
+        // Layer B (Tilted Shale)
+        ctx.fillStyle = shalePattern;
+        ctx.beginPath(); ctx.moveTo(0, 420); ctx.lineTo(420, 310); ctx.lineTo(420, 240); ctx.lineTo(0, 340);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+
+        ctx.fillStyle = "#1e293b"; ctx.font = "bold 13px Inter, sans-serif";
+        ctx.fillText("Layer A (Sandstone)", 210, 385);
+        ctx.fillText("Layer B (Shale)", 120, 335);
+
+        // Angular Unconformity Line
+        ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 4;
+        ctx.setLineDash([7, 5]);
+        ctx.beginPath(); ctx.moveTo(0, 240); ctx.lineTo(420, 240); ctx.stroke();
+        ctx.setLineDash([]); ctx.lineWidth = 1.5;
+        ctx.fillStyle = '#dc2626';
+        ctx.fillText("Unconformity U ~~~~~~~~~", 15, 233);
+
+        // Layer C (Horizontal Limestone)
+        ctx.fillStyle = limePattern;
+        ctx.fillRect(0, 160, 420, 80); ctx.strokeRect(0, 160, 420, 80);
+        ctx.fillStyle = '#1e293b';
+        ctx.fillText("Layer C (Limestone)", 20, 195);
+
+        // Inclusions of Layer A inside Layer C
+        ctx.fillStyle = sandPattern;
+        ctx.fillRect(190, 210, 16, 16); ctx.strokeRect(190, 210, 16, 16);
+        ctx.fillRect(230, 215, 12, 12); ctx.strokeRect(230, 215, 12, 12);
+        ctx.fillStyle = '#1e293b'; ctx.font = "11px Inter, sans-serif";
+        ctx.fillText("Inclusions of A", 180, 202);
+
+        // Layer D (Siltstone)
+        ctx.fillStyle = '#ccfbf1';
+        ctx.fillRect(0, 60, 420, 100); ctx.strokeRect(0, 60, 420, 100);
+        ctx.fillStyle = '#0f766e'; ctx.font = "bold 13px Inter, sans-serif";
+        ctx.fillText("Layer D (Siltstone)", 20, 100);
+
+        // Dike E (Basalt Magma Dike)
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.moveTo(290, 420); ctx.lineTo(320, 420); ctx.lineTo(365, 70); ctx.lineTo(335, 70);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText("Dike E", 318, 130);
+
+        // Fault F (Displaces all)
+        ctx.strokeStyle = '#000000'; ctx.lineWidth = 3.5;
+        ctx.beginPath(); ctx.moveTo(110, 420); ctx.lineTo(265, 25); ctx.stroke();
+        ctx.fillStyle = '#000000';
+        ctx.fillText("Fault Line F", 240, 45);
+    }
+
+    // Submit Action with Dramatic Effects (No True/False evaluation shown to students)
+    async function handleSubmission() {
+        const studentName = document.getElementById('studentName').value.trim();
+        const studentId = document.getElementById('studentId').value.trim();
+        const submitBtn = document.getElementById('submitBtn');
+
+        if (!studentName || !studentId) {
+            alert('Please enter your Name and Student ID before submitting.');
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Transmitting Data...";
+
+        const userOrder = currentSequence.map(item => item.id);
+        const isCorrect = JSON.stringify(userOrder) === JSON.stringify(correctSequence);
+
+        try {
+            const submissionsRef = ref(db, 'submissions');
+            await push(submissionsRef, {
+                name: studentName,
+                studentId: studentId,
+                isCorrect: isCorrect,
+                sequenceSubmitted: userOrder,
+                timestamp: new Date().toISOString()
+            });
+
+            // Dramatic Fireworks Confetti Burst
+            confetti({
+                particleCount: 120,
+                spread: 80,
+                origin: { y: 0.6 }
+            });
+
+            // Show Confirmation Modal
+            document.getElementById('submissionModal').classList.add('active');
+
+        } catch (error) {
+            console.error("Submission failed: ", error);
+            alert("Connection error! Unable to record submission.");
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerText = "🚀 Submit Final Assignment";
+        }
+    }
+
+    window.closeModal = function() {
+        document.getElementById('submissionModal').classList.remove('active');
+    };
+
+    renderList();
+    drawDiagram();
+    document.getElementById('submitBtn').addEventListener('click', handleSubmission);
+</script>
+
+</body>
+</html>
